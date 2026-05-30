@@ -7,13 +7,12 @@ import (
 	"log"
 	"net"
 	"time"
-	"github.com/mdp/qrterminal/v3"    
-
 
 	"golang.org/x/crypto/ssh"
+	"github.com/mdp/qrterminal/v3"
 
-	"t.hostbetter.live/internal/config"
-	"t.hostbetter.live/internal/tunnel"
+	"tunnl.gg/internal/config"
+	"tunnl.gg/internal/tunnel"
 )
 
 type tcpipForwardRequest struct {
@@ -139,8 +138,6 @@ func (s *Server) HandleSSHConnection(conn net.Conn) {
 	defer s.RemoveTunnel(sub)
 
 	url := fmt.Sprintf("https://%s.%s", sub, s.domain)
-	expiresAt := tun.CreatedAt.Add(config.MaxTunnelLifetime).Format("Jan 02, 2006 at 15:04 MST")
-	expiresLine := fmt.Sprintf("%s (or %s idle)", expiresAt, formatDuration(config.InactivityTimeout))
 
 	// ANSI color codes
 	const (
@@ -151,10 +148,11 @@ func (s *Server) HandleSSHConnection(conn net.Conn) {
 	)
 
 	urlMessage := "\r\n" +
-		gray + "Connected to HostBetter Tunnel" + s.domain + "." + reset + "\r\n" +
+		gray + "Connected to " + s.domain + "." + reset + "\r\n" +
 		boldGreen + "Tunnel is live!" + reset + "\r\n" +
-		gray + "Public URL: " + purple + url + reset + "\r\n" +
-		gray + "Expires:    " + expiresLine + reset + "\r\n\r\n"
+                gray + "Public URL: " + purple + url + reset + "\r\n" +
+                gray + "Expires in: 2h idle / 24h max" + reset + "\r\n" +
+                gray + "Replace 3000 with your local port" + reset + "\r\n\r\n"
 
 	// Inactivity checker
 	go func() {
@@ -208,11 +206,9 @@ func (s *Server) HandleSSHConnection(conn net.Conn) {
 		return
 	}
 
-fmt.Fprint(channel, urlMessage)
-
-// Print QR code
-qrterminal.GenerateHalfBlock(url, qrterminal.L, channel)
-fmt.Fprint(channel, "\r\n")
+	fmt.Fprint(channel, urlMessage)
+	qrterminal.GenerateHalfBlock(url, qrterminal.L, channel)
+	fmt.Fprint(channel, "\r\n")
 
 	logger := tunnel.NewRequestLogger(channel, config.LogBufferSize)
 	tun.SetLogger(logger)
